@@ -32,7 +32,7 @@ async function startKitchenWorker(): Promise<void> {
 
                 channel.sendToQueue(
                     "notification_queue",
-                    ArrayBuffer.from(JSON.stringify(order)),
+                    Buffer.from(JSON.stringify(order)),
                     { persistent: true }
                 );
 
@@ -41,7 +41,7 @@ async function startKitchenWorker(): Promise<void> {
         });
 
     } catch (error) {
-        console.error("Fel i Kitchen Service, start om om 5 sekunder...", error);
+        console.error("Fel i Kitchen Service, startar om om 5 sekunder...", error);
         setTimeout(startKitchenWorker, 5000);
     }
 }

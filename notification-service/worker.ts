@@ -21,7 +21,7 @@ async function startNotificationWorker(): Promise<void> {
             if (!msg) return;
 
             const order: Order = JSON.parse(msg.content.toString());
-            console.log(`\[NOTIFIKATION] Kund ${order.customerId}: Din order #${order.id} är redo för upphämtning! 🍔🎉\n`);
+            console.log(`\[NOTIFIKATION] Kund ${order.customerId}: Din order #${order.id} är redo för upphämtning! 🍔\n`);
 
             channel.ack(msg);
         });
