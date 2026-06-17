@@ -10,22 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      rabbitmq:
-        image: rabbitmq:3-management
-        env:
-          RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+hmbs 1048576 +hms 1048576"
-        ports:
-          - 5672:5672
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: order_db
-        ports:
-          - 5432:5432
-
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +17,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Start Environment with Docker Compose
+        run: |
+          docker compose up --build -d
+          echo "Väntar på att tjänsterna ska initieras..."
+          sleep 15
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
