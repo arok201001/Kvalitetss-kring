@@ -3,7 +3,7 @@ import amqp, { Connection, Channel, ConsumeMessage } from 'amqplib';
 const RABBITMQ_URL: string = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
 
 interface Order {
-    id: number;
+    id: string;
     customerId: string;
     status: string;
 }

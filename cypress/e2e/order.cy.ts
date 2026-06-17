@@ -28,7 +28,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
     });
   });
 
-  it('Ska acceptera ordern med 202 även om items-listan är tom', () => {
+  it('Ska neka ordern med 400 Bad Request om items-listan är tom', () => {
     cy.request({
       method: 'POST',
       url: '/api/orders',
@@ -38,7 +38,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
         items: []
       }
     }).then((response) => {
-      expect(response.status).to.eq(202);
+      expect(response.status).to.eq(400);
     });
   });
 
@@ -49,6 +49,43 @@ describe('Fastfood System E2E & Integrationstester', () => {
       failOnStatusCode: false
     }).then((response) => {
       expect(response.status).to.eq(404);
+    });
+  });
+
+  it('Ska kunna skicka en order, hämta den via ID, och verifiera statusuppdatering', () => {
+    cy.request({
+      method: 'POST',
+      url: '/api/orders',
+      body: {
+        customerId: "Cypress_Database_Test",
+        items: [
+          { id: 1, name: "Falafelburgare", quantity: 2 },
+          { id: 2, name: "Pommes", quantity: 1 }
+        ]
+      }
+    }).then((postResponse) => {
+      expect(postResponse.status).to.eq(202);
+      const orderId = postResponse.body.orderId;
+      
+      cy.request({
+        method: 'GET',
+        url: `/api/orders/${orderId}`
+      }).then((getResponse) => {
+        expect(getResponse.status).to.eq(200);
+        expect(getResponse.body.id).to.eq(orderId);
+        expect(getResponse.body.customerId).to.eq("Cypress_Database_Test");
+        expect(getResponse.body.items.length).to.eq(2);
+        
+        cy.wait(4000);
+        
+        cy.request({
+          method: 'GET',
+          url: `/api/orders/${orderId}`
+        }).then((readyResponse) => {
+          expect(readyResponse.status).to.eq(200);
+          expect(readyResponse.body.status).to.eq("READY");
+        });
+      });
     });
   });
 
