@@ -1,7 +1,7 @@
 import fastify from "fastify";
 
 const server = fastify({ logger: true });
-const PORT = process.env.PORT ? parseInt(process.env.port) : 3001;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 interface Product {
     id: number;

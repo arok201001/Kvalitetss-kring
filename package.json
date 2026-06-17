@@ -1,0 +1,12 @@
+{
+  "name": "fastfood-system-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "cypress run"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "cypress": "^15.17.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,7 +1,6 @@
 import fastify from 'fastify';
 import { Pool } from 'pg';
 import amqp, { Channel } from 'amqplib';
-import nodeHttp2 = require('node:http2');
 
 const server = fastify({ logger: true });
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
@@ -10,8 +9,7 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:56
 
 const pool = new Pool({
     connectionString: DATABASE_URL,
-
-}),
+});
 
 let channel: Channel;
 
@@ -23,7 +21,7 @@ async function connectRabbit() {
         server.log.info("Order Service ansluten till RabbitMQ!");
     } catch (err) {
         server.log.error("Kunde inte ansluta till RabbitMQ, försöker igen om 5 sekunder...", err);
-        setTimeout(connectionRabbit, 5000);
+        setTimeout(connectRabbit, 5000);
     }
 }
 
@@ -45,7 +43,6 @@ server.post("/api/orders", async (request, reply) => {
 
     if (!customerId || !items) {
         return reply.status(400).send({ error: "customerId och items krävs." });
-
     }
 
     const order = {
