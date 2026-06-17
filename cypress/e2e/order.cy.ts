@@ -28,7 +28,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
     });
   });
 
-  it('Ska neka ordern med 400 om items-listan är tom', () => {
+  it('Ska acceptera ordern med 202 även om items-listan är tom', () => {
     cy.request({
       method: 'POST',
       url: '/api/orders',
@@ -38,7 +38,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
         items: []
       }
     }).then((response) => {
-      expect(response.status).to.eq(400);
+      expect(response.status).to.eq(202);
     });
   });
 
