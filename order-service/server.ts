@@ -46,7 +46,7 @@ server.post("/api/orders", async (request, reply) => {
     }
 
     const order = {
-        id: Math.floor(Math.random() * 10000),
+        id: crypto.randomUUID(),
         customerId,
         items,
         status: "PENDING",
