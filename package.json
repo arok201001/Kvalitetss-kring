@@ -2,11 +2,13 @@
   "name": "fastfood-system-tests",
   "version": "1.0.0",
   "scripts": {
-    "test": "cypress run"
+    "test": "cypress run",
+    "test:unit": "npx tsx --test order-service/utils.test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
     "cypress": "^15.17.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }

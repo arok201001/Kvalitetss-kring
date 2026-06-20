@@ -11,7 +11,49 @@ describe('Fastfood System E2E & Integrationstester', () => {
     });
   });
 
-  it('Ska skicka en giltig order och få 202 Accepted', () => {
+  it('Ska kunna lägga till en ny produkt och verifiera att den finns i menyn', () => {
+    const newProduct = {
+      name: `Cypress_Hamburgare_${Date.now()}`,
+      price: 119
+    };
+
+    cy.request({
+      method: 'POST',
+      url: '/api/products',
+      body: newProduct
+    }).then((postResponse) => {
+      expect(postResponse.status).to.eq(201);
+      expect(postResponse.body).to.have.property('id');
+      expect(postResponse.body.name).to.eq(newProduct.name);
+      expect(postResponse.body.price).to.eq(newProduct.price);
+
+      cy.request({
+        method: 'GET',
+        url: '/api/products'
+      }).then((getResponse) => {
+        expect(getResponse.status).to.eq(200);
+        const addedProduct = getResponse.body.find((p: any) => p.name === newProduct.name);
+        expect(addedProduct).to.not.be.undefined;
+        expect(addedProduct.price).to.eq(newProduct.price);
+      });
+    });
+  });
+
+  it('Ska neka produktinläggning med 400 Bad Request om priset är ogiltigt', () => {
+    cy.request({
+      method: 'POST',
+      url: '/api/products',
+      failOnStatusCode: false,
+      body: {
+        name: "Ogiltig produkt",
+        price: -5
+      }
+    }).then((response) => {
+      expect(response.status).to.eq(400);
+    });
+  });
+
+  it('Ska skicka en giltig order och få 201 Created', () => {
     cy.request({
       method: 'POST',
       url: '/api/orders',
@@ -22,7 +64,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
         ]
       }
     }).then((response) => {
-      expect(response.status).to.eq(202);
+      expect(response.status).to.eq(201);
       expect(response.body).to.have.property('orderId');
       expect(response.body.message).to.eq('Order mottagen!');
     });
@@ -64,7 +106,7 @@ describe('Fastfood System E2E & Integrationstester', () => {
         ]
       }
     }).then((postResponse) => {
-      expect(postResponse.status).to.eq(202);
+      expect(postResponse.status).to.eq(201);
       const orderId = postResponse.body.orderId;
       
       cy.request({
@@ -76,7 +118,13 @@ describe('Fastfood System E2E & Integrationstester', () => {
         expect(getResponse.body.customerId).to.eq("Cypress_Database_Test");
         expect(getResponse.body.items.length).to.eq(2);
         
-        cy.wait(4000);
+        cy.request({
+          method: 'POST',
+          url: `/api/kitchen/orders/${orderId}/complete`
+        }).then((completeResponse) => {
+          expect(completeResponse.status).to.eq(200);
+        });
+        cy.wait(1000);
         
         cy.request({
           method: 'GET',

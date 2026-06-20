@@ -1,23 +1,41 @@
 import fastify from "fastify";
+import { connectDb, dbReady, getProducts, createProduct } from "./db";
+import { productBodySchema } from "./schemas";
 
 const server = fastify({ logger: true });
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
-interface Product {
-    id: number;
-    name: string;
-    price: number;
-}
-
-const menu: Product[] = [
-    { id: 1, name: "Falafelburgare", price: 89 },
-    { id: 2, name: "Pommes", price: 35 },
-    { id: 3, name: "Islatte", price: 29 },
-    { id: 4, name: "Läsk", price: 25 }
-];
+connectDb(server.log);
 
 server.get("/api/products", async (request, reply) => {
-    return menu;
+    if (!dbReady) {
+        return reply.status(503).send({ error: "Databasen är inte redo än." });
+    }
+    try {
+        const products = await getProducts();
+        return products;
+    } catch (err) {
+        server.log.error("Fel vid hämtning av produkter:", err);
+        return reply.status(500).send({ error: "Internt fel vid hämtning av produkter." });
+    }
+});
+
+server.post("/api/products", {
+    schema: {
+        body: productBodySchema
+    }
+}, async (request, reply) => {
+    if (!dbReady) {
+        return reply.status(503).send({ error: "Databasen är inte redo än." });
+    }
+    const { name, price } = request.body as { name: string; price: number };
+    try {
+        const product = await createProduct(name, price);
+        return reply.status(201).send(product);
+    } catch (err) {
+        server.log.error("Fel vid skapande av produkt:", err);
+        return reply.status(500).send({ error: "Internt fel vid skapande av produkt." });
+    }
 });
 
 const start = async () => {

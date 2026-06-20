@@ -3,8 +3,6 @@ version: '3.8'
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    ports:
-      - "127.0.0.1:15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
@@ -15,6 +13,8 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: order_db
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d
 
   gateway:
     image: nginx:alpine
@@ -25,11 +25,15 @@ services:
     depends_on:
       - product-service
       - order-service
+      - kitchen-service
 
   product-service:
     build: ./product-service
     environment:
       - PORT=3001
+      - DATABASE_URL=postgres://user:password@postgres:5432/product_db
+    depends_on:
+      - postgres
 
   order-service:
     build: ./order-service
@@ -44,8 +48,11 @@ services:
   kitchen-service:
     build: ./kitchen-service
     environment:
+      - PORT=3003
+      - DATABASE_URL=postgres://user:password@postgres:5432/kitchen_db
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
+      - postgres
       - rabbitmq
 
   notification-service:

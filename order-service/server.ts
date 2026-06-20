@@ -10,6 +10,7 @@ import {
     updateOrderStatus
 } from './db';
 import { orderBodySchema } from './schemas';
+import { validateUuid } from './utils';
 
 const server = fastify({ logger: true });
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
@@ -31,8 +32,7 @@ async function connectRabbit() {
             if (!msg) return;
             try {
                 const update = JSON.parse(msg.content.toString()) as { id: string; status: string };
-                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                if (!uuidRegex.test(update.id)) {
+                if (!validateUuid(update.id)) {
                     server.log.warn(`Ogiltigt order-ID format för statusuppdatering: ${update.id}`);
                     channel.ack(msg);
                     return;
@@ -94,7 +94,7 @@ server.post("/api/orders", {
 
     try {
         channel.sendToQueue("order_queue", Buffer.from(JSON.stringify(order)), { persistent: true });
-        return reply.status(202).send({
+        return reply.status(201).send({
             message: "Order mottagen!",
             orderId: order.id
         });
@@ -110,8 +110,8 @@ server.get("/api/orders/:id", async (request, reply) => {
     }
 
     const { id } = request.params as { id: string };
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
+
+    if (!validateUuid(id)) {
         return reply.status(404).send({ error: "Ordern hittades inte." });
     }
 

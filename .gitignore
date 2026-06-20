@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# OS/System files
+.DS_Store
+Thumbs.db
+
+# Build and logs
+dist/
+build/
+*.log
+npm-debug.log*
+
+# Cypress test outputs
+cypress/screenshots/
+cypress/videos/
+
+# Local docker config
+.docker-config/
