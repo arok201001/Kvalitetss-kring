@@ -26,6 +26,7 @@ jobs:
 
       - name: Start Environment with Docker Compose
         run: |
+          cp .env.example .env
           docker compose up --build -d
           echo "Väntar på att tjänsterna ska bli redo..."
           for i in $(seq 1 30); do
