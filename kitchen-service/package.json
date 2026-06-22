@@ -2,8 +2,9 @@
   "name": "kitchen-service",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "worker.ts",
   "scripts": {
+    "start": "npx tsx worker.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -53,19 +53,21 @@ export interface KitchenOrder {
     createdAt: Date;
 }
 
-export async function saveKitchenOrder(order: any): Promise<void> {
+export async function saveKitchenOrder(order: KitchenOrder): Promise<void> {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query(
-            'INSERT INTO kitchen_orders (id, customer_id, status, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
+        const result = await client.query(
+            'INSERT INTO kitchen_orders (id, customer_id, status, created_at) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING RETURNING id',
             [order.id, order.customerId, order.status, order.createdAt]
         );
-        for (const item of order.items) {
-            await client.query(
-                'INSERT INTO kitchen_order_items (order_id, product_id, name, quantity) VALUES ($1, $2, $3, $4)',
-                [order.id, item.id, item.name, item.quantity]
-            );
+        if (result.rowCount && result.rowCount > 0) {
+            for (const item of order.items) {
+                await client.query(
+                    'INSERT INTO kitchen_order_items (order_id, product_id, name, quantity) VALUES ($1, $2, $3, $4)',
+                    [order.id, item.id, item.name, item.quantity]
+                );
+            }
         }
         await client.query('COMMIT');
     } catch (dbError) {

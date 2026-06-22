@@ -1,20 +1,28 @@
-version: '3.8'
-
 services:
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: order_db
     volumes:
       - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   gateway:
     image: nginx:alpine
@@ -26,38 +34,50 @@ services:
       - product-service
       - order-service
       - kitchen-service
+      - notification-service
 
   product-service:
     build: ./product-service
     environment:
       - PORT=3001
-      - DATABASE_URL=postgres://user:password@postgres:5432/product_db
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/product_db
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   order-service:
     build: ./order-service
     environment:
       - PORT=3002
-      - DATABASE_URL=postgres://user:password@postgres:5432/order_db
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/order_db
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      - PRODUCT_SERVICE_URL=http://product-service:3001
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   kitchen-service:
     build: ./kitchen-service
     environment:
       - PORT=3003
-      - DATABASE_URL=postgres://user:password@postgres:5432/kitchen_db
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/kitchen_db
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   notification-service:
     build: ./notification-service
     environment:
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - PORT=3004
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/notification_db
     depends_on:
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy

@@ -27,8 +27,19 @@ jobs:
       - name: Start Environment with Docker Compose
         run: |
           docker compose up --build -d
-          echo "Väntar på att tjänsterna ska initieras..."
-          sleep 15
+          echo "Väntar på att tjänsterna ska bli redo..."
+          for i in $(seq 1 30); do
+            if curl -s http://localhost/api/products > /dev/null 2>&1; then
+              echo "Tjänsterna är redo!"
+              break
+            fi
+            echo "Försök $i/30 - väntar 5 sekunder..."
+            sleep 5
+          done
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker compose down

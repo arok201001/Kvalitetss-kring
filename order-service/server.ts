@@ -7,14 +7,16 @@ import {
     saveOrder,
     getOrderById,
     getAllOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    pool
 } from './db';
 import { orderBodySchema } from './schemas';
-import { validateUuid } from './utils';
+import { validateUuid, validateOrderItems } from './utils';
 
 const server = fastify({ logger: true });
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3002;
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
+const RABBITMQ_URL = process.env.RABBITMQ_URL || (() => { throw new Error("RABBITMQ_URL is required") })();
+const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || (() => { throw new Error("PRODUCT_SERVICE_URL is required") })();
 
 let channel: Channel;
 
@@ -64,7 +66,24 @@ interface OrderRequest {
     items: OrderItem[];
 }
 
-
+async function validateProductsExist(items: OrderItem[]): Promise<{ valid: boolean; error?: string }> {
+    try {
+        const response = await fetch(`${PRODUCT_SERVICE_URL}/api/products`);
+        if (!response.ok) {
+            return { valid: false, error: 'Kunde inte hämta produktlistan för validering.' };
+        }
+        const products = await response.json() as Array<{ id: number; name: string; price: number }>;
+        const productIds = new Set(products.map(p => p.id));
+        for (const item of items) {
+            if (!productIds.has(item.id)) {
+                return { valid: false, error: `Produkten med ID ${item.id} finns inte i menyn.` };
+            }
+        }
+        return { valid: true };
+    } catch (err) {
+        return { valid: false, error: 'Kunde inte nå product-service för validering.' };
+    }
+}
 
 server.post("/api/orders", {
     schema: {
@@ -76,6 +95,16 @@ server.post("/api/orders", {
     }
 
     const { customerId, items } = request.body as OrderRequest;
+
+    if (!validateOrderItems(items)) {
+        return reply.status(400).send({ error: 'Ogiltiga order-items. Kontrollera att alla har giltigt id, namn och kvantitet.' });
+    }
+
+    const productCheck = await validateProductsExist(items);
+    if (!productCheck.valid) {
+        return reply.status(400).send({ error: productCheck.error });
+    }
+
     const orderId = randomUUID();
     const order = {
         id: orderId,
@@ -88,20 +117,26 @@ server.post("/api/orders", {
     try {
         await saveOrder(order);
     } catch (dbError) {
-        server.log.error("Kunde inte spara ordern i databasen:", dbError);
-        return reply.status(500).send({ error: "Internt fel vid sparande av order." });
+        server.log.error('Kunde inte spara ordern i databasen:', dbError);
+        return reply.status(500).send({ error: 'Internt fel vid sparande av order.' });
     }
 
     try {
-        channel.sendToQueue("order_queue", Buffer.from(JSON.stringify(order)), { persistent: true });
-        return reply.status(201).send({
-            message: "Order mottagen!",
-            orderId: order.id
-        });
-    } catch (error) {
-        server.log.error("Kunde inte skicka order till RabbitMQ:", error);
-        return reply.status(500).send({ error: "Internt systemfel vid kö-publicering." });
+        channel.sendToQueue('order_queue', Buffer.from(JSON.stringify(order)), { persistent: true });
+    } catch (publishError) {
+        server.log.error('Kunde inte skicka order till RabbitMQ, rullar tillbaka:', publishError);
+        try {
+            await pool.query('DELETE FROM orders WHERE id = $1', [order.id]);
+        } catch (rollbackError) {
+            server.log.error('Kunde inte rulla tillbaka ordern:', rollbackError);
+        }
+        return reply.status(500).send({ error: 'Internt systemfel vid kö-publicering.' });
     }
+
+    return reply.status(201).send({
+        message: 'Order mottagen!',
+        orderId: order.id
+    });
 });
 
 server.get("/api/orders/:id", async (request, reply) => {
@@ -112,7 +147,7 @@ server.get("/api/orders/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
 
     if (!validateUuid(id)) {
-        return reply.status(404).send({ error: "Ordern hittades inte." });
+        return reply.status(400).send({ error: 'Ogiltigt order-ID-format.' });
     }
 
     try {

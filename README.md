@@ -10,13 +10,22 @@ Systemet består av fristående mikrotjänster som kommunicerar asynkront via Ra
 
 ## Starta systemet
 
+### 1. Konfigurera miljövariabler
+Innan du kan starta systemet måste du skapa en `.env` fil för de lösenord som systemet kräver.
+Kopiera helt enkelt mallen i projektets rot:
+```bash
+cp .env.example .env
+```
+(Eller skapa filen manuellt och kopiera in innehållet från `.env.example`).
+
+### 2. Starta med Docker Compose
 Starta hela miljön med följande kommando:
 
-bash
+```bash
 docker compose up --build
+```
 
-
-Detta bygger containrarna, förbereder databaserna (order_db, product_db och kitchen_db), lägger till standardprodukterna i menyn och startar Nginx-gatewayen på port 80.
+Detta bygger containrarna, förbereder databaserna (order_db, product_db, kitchen_db och notification_db), lägger till standardprodukterna i menyn och startar Nginx-gatewayen på port 80.
 
 ## API och anropsvägar
 
@@ -43,30 +52,36 @@ Eftersom all extern trafik går via Nginx på port 80 använder du bas-URL:en `h
 * Markera en beställning som klar (motsvarar att kökspersonalen trycker på skärmen):
   `POST http://localhost/api/kitchen/orders/<orderId>/complete`
 
+### Notifikationer (Notification Service)
+* Hämta alla notifikationer för en kund:
+  `GET http://localhost/api/notifications?customerId=<kundens_namn>`
+
+
 ## Tester
 
 Projektet har både enhetstester och integrationstester.
 
-> Innan du kör testerna lokalt på din maskin måste du först installera testverktygen. Ställ dig i projektets rotmapp och kör:
+Innan du kör testerna lokalt på din maskin måste du först installera testverktygen. Ställ dig i projektets rotmapp och kör:
 
-> bash
-> npm install
-
+```bash
+npm install
+```
 
 ### Enhetstester
 Dessa testar valideringslogik (som UUID-kontroller och orderstrukturer) med Node.js inbyggda testverktyg.
 Kör testerna lokalt med:
 
-bash
+```bash
 npm run test:unit
+```
 
 ### Integrationstester
 Integrationstesterna i Cypress går igenom hela flödet från menyval och orderläggning till klarmarkering i köket.
 Kör testerna med:
 
-bash
+```bash
 npm run test
-
+```
 
 ### Automatisk testning i GitHub
-Varje gång du pushar kod till main branschen körs hela testsviten automatiskt i GitHub Actions (se inställningarna i .github/workflows/ci.yml).
+Varje gång du pushar kod till main branschen körs hela testsviten automatiskt i GitHub Actions (se inställningarna i `.github/workflows/ci.yml`).

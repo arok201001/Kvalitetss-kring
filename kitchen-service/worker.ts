@@ -12,7 +12,7 @@ import { completeOrderParamsSchema } from './schemas';
 
 const server = fastify({ logger: true });
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3003;
-const RABBITMQ_URL: string = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
+const RABBITMQ_URL: string = process.env.RABBITMQ_URL || (() => { throw new Error("RABBITMQ_URL is required") })();
 
 let channel: Channel;
 

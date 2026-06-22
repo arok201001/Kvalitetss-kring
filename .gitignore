@@ -18,3 +18,6 @@ cypress/videos/
 
 # Local docker config
 .docker-config/
+
+# Environment files
+.env
